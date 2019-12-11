@@ -113,7 +113,7 @@ class ImageDatasetFromFile(data.Dataset):
         else:
           is_mirror = False
           
-        lr, hr = load_video_image(join(self.root_path, self.image_filenames[index]), 
+        lr, hr = load_video_image(join(self.root_path, self.image_filenames[index]), # use "root_path" and "image_filenmes" to generate full img path
                                   self.input_height, self.input_width, self.output_height, self.output_width,
                                   self.crop_height, self.crop_width, self.is_random_crop, is_mirror,
                                   self.is_gray, self.upscale, self.is_scale_back)

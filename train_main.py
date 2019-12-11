@@ -26,29 +26,38 @@ parser.add_argument('--mse_avg', action='store_true', help='enables mse avg')
 parser.add_argument('--num_layers_res', type=int, help='number of the layers in residual block', default=2)
 parser.add_argument('--nrow', type=int, help='number of the rows to save images', default=10)
 
+parser.add_argument('--trainfiles', default="/disk2/wangxd/WaveletSRNet/data/casia_separate/casia_train.txt", type=str, help='the list of training files')
+parser.add_argument('--dataroot', default="/nas/wangxudong/CASIA_ALIGN/", type=str, help='path to dataset')
 
-parser.add_argument('--trainfiles', default="path/celeba/train.list", type=str, help='the list of training files')
-parser.add_argument('--dataroot', default="path/celeba", type=str, help='path to dataset')
+
+parser.add_argument('--testfiles', default="/disk2/wangxd/WaveletSRNet/data/casia_separate/casia_test.txt", type=str, help='the list of training files')
+parser.add_argument('--testroot', default="/nas/wangxudong/CASIA_ALIGN/", type=str, help='path to dataset')
 
 
-parser.add_argument('--testfiles', default="path/test.list", type=str, help='the list of training files')
+parser.add_argument('--trainsize', type=int, help='number of training data', default=434590)
+parser.add_argument('--testsize', type=int, help='number of testing data', default=20000)
 
-parser.add_argument('--testroot', default="path/celeba", type=str, help='path to dataset')
-parser.add_argument('--trainsize', type=int, help='number of training data', default=162770)
-parser.add_argument('--testsize', type=int, help='number of testing data', default=19962)
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
 parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
 parser.add_argument('--test_batchSize', type=int, default=64, help='test batch size')
 parser.add_argument('--save_iter', type=int, default=10, help='the interval iterations for saving models')
 parser.add_argument('--test_iter', type=int, default=500, help='the interval iterations for testing')
 parser.add_argument('--cdim', type=int, default=3, help='the channel-size  of the input image to network')
-parser.add_argument('--input_height', type=int, default=128, help='the height  of the input image to network')
-parser.add_argument('--input_width', type=int, default=None, help='the width  of the input image to network')
-parser.add_argument('--output_height', type=int, default=128, help='the height  of the output image to network')
-parser.add_argument('--output_width', type=int, default=None, help='the width  of the output image to network')
-parser.add_argument('--crop_height', type=int, default=None, help='the width  of the output image to network')
-parser.add_argument('--crop_width', type=int, default=None, help='the width  of the output image to network')
-parser.add_argument('--upscale', type=int, default=2, help='the depth of wavelet tranform')
+
+
+parser.add_argument('--input_height', type=int, default=112, help='the height  of the input image to network')
+parser.add_argument('--input_width', type=int, default=96, help='the width  of the input image to network')
+
+parser.add_argument('--output_height', type=int, default=112, help='the height  of the output image to network')
+parser.add_argument('--output_width', type=int, default=96, help='the width  of the output image to network')
+
+parser.add_argument('--crop_height', type=int, default=112, help='the width  of the output image to network')
+parser.add_argument('--crop_width', type=int, default=96, help='the width  of the output image to network')
+
+
+parser.add_argument('--upscale', type=int, default=2, help='the depth of wavelet tranform')  # int(math.pow(2, opt.upscale)) is the scacle foctor
+
+
 parser.add_argument('--scale_back', action='store_true', help='enables scale_back')
 parser.add_argument("--nEpochs", type=int, default=500, help="number of epochs to train for")
 parser.add_argument("--start_epoch", default=1, type=int, help="Manual epoch number (useful on restarts)")
@@ -88,7 +97,7 @@ def main():
         
     ngpu = int(opt.ngpu)   
     nc = opt.cdim
-    mag = int(math.pow(2, opt.upscale))
+    mag = int(math.pow(2, opt.upscale))  # # ****  scale_factor
     groups = mag ** 2
     if opt.scale_back:      
       is_scale_back = True
@@ -137,7 +146,8 @@ def main():
               output_height=opt.output_height, output_width=opt.output_width,
               crop_height=opt.crop_height, crop_width=opt.crop_width,
               is_random_crop=True, is_mirror=True, is_gray=False, 
-              upscale=mag, is_scale_back=is_scale_back)    
+              upscale=mag, # the scale_factor
+              is_scale_back=is_scale_back)    
 
 
     train_data_loader = torch.utils.data.DataLoader(train_set, batch_size=opt.batchSize,
@@ -227,10 +237,10 @@ def forward_parallel(net, input, ngpu):
         return net(input)
             
 def save_checkpoint(model, epoch, iteration, prefix=""):
-    model_out_path = "model/" + prefix +"model_epoch_{}_iter_{}.pth".format(epoch, iteration)
+    model_out_path = "/nas/wangxudong/save_model/wavelet/" + prefix +"model_epoch_{}_iter_{}.pth".format(epoch, iteration)
     state = {"epoch": epoch ,"model": model}
-    if not os.path.exists("model/"):
-        os.makedirs("model/")
+    if not os.path.exists("/nas/wangxudong/save_model/wavelet/"):
+        os.makedirs("/nas/wangxudong/save_model/wavelet/")
 
     torch.save(state, model_out_path)
         

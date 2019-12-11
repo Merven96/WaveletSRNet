@@ -31,23 +31,34 @@ parser.add_argument('--trainfiles', default="path/celeba/train.list", type=str, 
 parser.add_argument('--dataroot', default="path/celeba", type=str, help='path to dataset')
 
 
-parser.add_argument('--testfiles', default="path/test.list", type=str, help='the list of training files')
+parser.add_argument('--testfiles', default="/disk2/wangxd/WaveletSRNet/data/lfw_landmark.txt", type=str, help='the list of training files')
 
-parser.add_argument('--testroot', default="path/celeba", type=str, help='path to dataset')
+parser.add_argument('--testroot', default="/nas/wangxudong/lfw/inter_aligned/", type=str, help='path to dataset')
+
+
 parser.add_argument('--trainsize', type=int, help='number of training data', default=162770)
-parser.add_argument('--testsize', type=int, help='number of testing data', default=19962)
+
+parser.add_argument('--testsize', type=int, help='number of testing data', default=13233)  # the number of LFW dataset
+
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
 parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
 parser.add_argument('--test_batchSize', type=int, default=64, help='test batch size')
 parser.add_argument('--save_iter', type=int, default=10, help='the interval iterations for saving models')
 parser.add_argument('--test_iter', type=int, default=500, help='the interval iterations for testing')
 parser.add_argument('--cdim', type=int, default=3, help='the channel-size  of the input image to network')
-parser.add_argument('--input_height', type=int, default=128, help='the height  of the input image to network')
-parser.add_argument('--input_width', type=int, default=None, help='the width  of the input image to network')
-parser.add_argument('--output_height', type=int, default=128, help='the height  of the output image to network')
-parser.add_argument('--output_width', type=int, default=None, help='the width  of the output image to network')
-parser.add_argument('--crop_height', type=int, default=None, help='the width  of the output image to network')
-parser.add_argument('--crop_width', type=int, default=None, help='the width  of the output image to network')
+
+
+parser.add_argument('--input_height', type=int, default=112, help='the height  of the input image to network')
+parser.add_argument('--input_width', type=int, default=96, help='the width  of the input image to network')
+
+parser.add_argument('--output_height', type=int, default=112, help='the height  of the output image to network')
+parser.add_argument('--output_width', type=int, default=96, help='the width  of the output image to network')
+
+
+parser.add_argument('--crop_height', type=int, default=112, help='the width  of the output image to network')
+parser.add_argument('--crop_width', type=int, default=96, help='the width  of the output image to network')
+
+
 parser.add_argument('--upscale', type=int, default=2, help='the depth of wavelet tranform')
 parser.add_argument('--scale_back', action='store_true', help='enables scale_back')
 parser.add_argument("--nEpochs", type=int, default=500, help="number of epochs to train for")
@@ -57,7 +68,7 @@ parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. de
 parser.add_argument("--momentum", default=0.9, type=float, help="Momentum, Default: 0.9")
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
-parser.add_argument('--outf', default='results/', help='folder to output images')
+parser.add_argument('--outf', default='./results/', help='folder to output images')
 parser.add_argument('--manualSeed', type=int, help='manual seed')
 parser.add_argument("--pretrained", default="", type=str, help="path to pretrained model (default: none)")
 
@@ -125,25 +136,29 @@ def main():
       criterion_m = criterion_m.cuda()
      
     
-    optimizer_sr = optim.Adam(srnet.parameters(), lr=opt.lr, betas=(opt.momentum, 0.999), weight_decay=0.0005)
+    # optimizer_sr = optim.Adam(srnet.parameters(), lr=opt.lr, betas=(opt.momentum, 0.999), weight_decay=0.0005)
     
     #-----------------load dataset--------------------------
-    train_list, _ = loadFromFile(opt.trainfiles, opt.trainsize)    
+
+    # train_list, _ = loadFromFile(opt.trainfiles, opt.trainsize)    
 
 
 
-    train_set = ImageDatasetFromFile(train_list, opt.dataroot, 
-              input_height=opt.input_height, input_width=opt.input_width,
-              output_height=opt.output_height, output_width=opt.output_width,
-              crop_height=opt.crop_height, crop_width=opt.crop_width,
-              is_random_crop=True, is_mirror=True, is_gray=False, 
-              upscale=mag, is_scale_back=is_scale_back)    
+    # train_set = ImageDatasetFromFile(train_list, opt.dataroot, 
+    #           input_height=opt.input_height, input_width=opt.input_width,
+    #           output_height=opt.output_height, output_width=opt.output_width,
+    #           crop_height=opt.crop_height, crop_width=opt.crop_width,
+    #           is_random_crop=True, is_mirror=True, is_gray=False, 
+    #           upscale=mag, is_scale_back=is_scale_back)    
 
 
-    train_data_loader = torch.utils.data.DataLoader(train_set, batch_size=opt.batchSize,
-                                     shuffle=True, num_workers=int(opt.workers))
-    
+    # train_data_loader = torch.utils.data.DataLoader(train_set, batch_size=opt.batchSize,
+    #                                  shuffle=True, num_workers=int(opt.workers))
+
+
     test_list, _ = loadFromFile(opt.testfiles, opt.testsize)
+
+
     test_set = ImageDatasetFromFile(test_list, opt.testroot, 
                   input_height=opt.output_height, input_width=opt.output_width,
                   output_height=opt.output_height, output_width=opt.output_width,
@@ -156,68 +171,95 @@ def main():
     
         
     start_time = time.time()
-    srnet.train()
-    #----------------Train by epochs--------------------------
-    for epoch in range(opt.start_epoch, opt.nEpochs + 1):  
-        if epoch%opt.save_iter == 0:
-            save_checkpoint(srnet, epoch, 0, 'sr_')
-        
-        for iteration, batch in enumerate(train_data_loader, 0):
-            #--------------test-------------
-            if iteration % opt.test_iter is 0 and opt.test:
-                srnet.eval()
-                avg_psnr = 0
-                for titer, batch in enumerate(test_data_loader,0):
-                    input, target = Variable(batch[0]), Variable(batch[1])
-                    if opt.cuda:
-                        input = input.cuda()
-                        target = target.cuda()    
 
-                    wavelets = forward_parallel(srnet, input, opt.ngpu)                    
-                    prediction = wavelet_rec(wavelets)
-                    mse = criterion_m(prediction, target)
-                    psnr = 10 * log10(1 / (mse.data[0]) )
-                    avg_psnr += psnr
-                                                    
-                    save_images(prediction, "Epoch_{:03d}_Iter_{:06d}_{:02d}_o.jpg".format(epoch, iteration, titer), 
+
+    #--------only Test--------------------
+    epoch=0
+    iteration=0
+   
+
+    srnet.eval()
+    avg_psnr = 0
+    for titer, batch in enumerate(test_data_loader,0):
+        input, target = Variable(batch[0]), Variable(batch[1])
+        if opt.cuda:
+            input = input.cuda()
+            target = target.cuda()    
+
+        wavelets = forward_parallel(srnet, input, opt.ngpu)                    
+        prediction = wavelet_rec(wavelets)
+        mse = criterion_m(prediction, target)
+        psnr = 10 * log10(1 / (mse.data[0]) )
+        avg_psnr += psnr
+                                        
+        save_images(prediction, "Epoch_{:03d}_Iter_{:06d}_{:02d}_o.jpg".format(epoch, iteration, titer), 
                                 path=opt.outf, nrow=opt.nrow)
                     
                     
-                print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(test_data_loader)))
-                srnet.train()
-              
-            #--------------train------------
-            input, target = Variable(batch[0]), Variable(batch[1], requires_grad=False)          
-            if opt.cuda:
-              input = input.cuda()
-              target = target.cuda()
-              
-            target_wavelets = wavelet_dec(target)
-          
-            batch_size = target.size(0)
-            wavelets_lr = target_wavelets[:,0:3,:,:]
-            wavelets_sr = target_wavelets[:,3:,:,:]
-            
-            wavelets_predict = forward_parallel(srnet, input, opt.ngpu)            
-            img_predict = wavelet_rec(wavelets_predict)
-            
-            
-            loss_lr = loss_MSE(wavelets_predict[:,0:3,:,:], wavelets_lr, opt.mse_avg)
-            loss_sr = loss_MSE(wavelets_predict[:,3:,:,:], wavelets_sr, opt.mse_avg)
-            loss_textures = loss_Textures(wavelets_predict[:,3:,:,:], wavelets_sr)
-            loss_img = loss_MSE(img_predict, target, opt.mse_avg)
-            
-            loss = loss_sr.mul(0.99) + loss_lr.mul(0.01) + loss_img.mul(0.1) + loss_textures.mul(1)           
-            
-            optimizer_sr.zero_grad()    
-            loss.backward()                       
-            optimizer_sr.step()
-            
-            info = "===> Epoch[{}]({}/{}): time: {:4.4f}:".format(epoch, iteration, len(train_data_loader), time.time()-start_time)
-            info += "Rec: {:.4f}, {:.4f}, {:.4f}, Texture: {:.4f}".format(loss_lr.data[0], loss_sr.data[0], 
-                                loss_img.data[0], loss_textures.data[0])            
-                          
-            print(info)
+    print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(test_data_loader)))
+    # srnet.train()
+    #----------------Train by epochs--------------------------
+    # for epoch in range(opt.start_epoch, opt.nEpochs + 1):  
+    #     if epoch%opt.save_iter == 0:
+    #         save_checkpoint(srnet, epoch, 0, 'sr_')
+    #     
+    #     for iteration, batch in enumerate(train_data_loader, 0):
+    #         #--------------test-------------
+    #         if iteration % opt.test_iter is 0 and opt.test:
+    #             srnet.eval()
+    #             avg_psnr = 0
+    #             for titer, batch in enumerate(test_data_loader,0):
+    #                 input, target = Variable(batch[0]), Variable(batch[1])
+    #                 if opt.cuda:
+    #                     input = input.cuda()
+    #                     target = target.cuda()    
+
+    #                 wavelets = forward_parallel(srnet, input, opt.ngpu)                    
+    #                 prediction = wavelet_rec(wavelets)
+    #                 mse = criterion_m(prediction, target)
+    #                 psnr = 10 * log10(1 / (mse.data[0]) )
+    #                 avg_psnr += psnr
+    #                                                 
+    #                 save_images(prediction, "Epoch_{:03d}_Iter_{:06d}_{:02d}_o.jpg".format(epoch, iteration, titer), 
+    #                             path=opt.outf, nrow=opt.nrow)
+    #                 
+    #                 
+    #             print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(test_data_loader)))
+    #             srnet.train()
+    #           
+    #         #--------------train------------
+
+    #         input, target = Variable(batch[0]), Variable(batch[1], requires_grad=False)          
+    #         if opt.cuda:
+    #           input = input.cuda()
+    #           target = target.cuda()
+    #           
+    #         target_wavelets = wavelet_dec(target)
+    #       
+    #         batch_size = target.size(0)
+    #         wavelets_lr = target_wavelets[:,0:3,:,:]
+    #         wavelets_sr = target_wavelets[:,3:,:,:]
+    #         
+    #         wavelets_predict = forward_parallel(srnet, input, opt.ngpu)            
+    #         img_predict = wavelet_rec(wavelets_predict)
+    #         
+    #         
+    #         loss_lr = loss_MSE(wavelets_predict[:,0:3,:,:], wavelets_lr, opt.mse_avg)
+    #         loss_sr = loss_MSE(wavelets_predict[:,3:,:,:], wavelets_sr, opt.mse_avg)
+    #         loss_textures = loss_Textures(wavelets_predict[:,3:,:,:], wavelets_sr)
+    #         loss_img = loss_MSE(img_predict, target, opt.mse_avg)
+    #         
+    #         loss = loss_sr.mul(0.99) + loss_lr.mul(0.01) + loss_img.mul(0.1) + loss_textures.mul(1)           
+    #         
+    #         optimizer_sr.zero_grad()    
+    #         loss.backward()                       
+    #         optimizer_sr.step()
+    #         
+    #         info = "===> Epoch[{}]({}/{}): time: {:4.4f}:".format(epoch, iteration, len(train_data_loader), time.time()-start_time)
+    #         info += "Rec: {:.4f}, {:.4f}, {:.4f}, Texture: {:.4f}".format(loss_lr.data[0], loss_sr.data[0], 
+    #                             loss_img.data[0], loss_textures.data[0])            
+    #                     
+    #         print(info)
              
 
 def forward_parallel(net, input, ngpu):
